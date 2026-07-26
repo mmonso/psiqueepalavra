@@ -1,0 +1,6 @@
+{
+  "name": "Blog de Ensaios de Psicologia",
+  "description": "Um espaço minimalista e focado em leitura confortável para publicação de ensaios e reflexões em psicologia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

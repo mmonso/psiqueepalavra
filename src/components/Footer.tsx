@@ -1,52 +1,63 @@
-import React from 'react';
-import { ReadingPreferences } from '../types';
-import { getThemeClasses } from '../utils/themeHelpers';
-import { ArrowUp, Feather } from 'lucide-react';
+'use client';
 
-interface FooterProps {
-  preferences: ReadingPreferences;
-}
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Feather } from 'lucide-react';
+import { usePreferencias } from './PreferencesProvider';
+import { site } from '@/lib/site';
 
-export const Footer: React.FC<FooterProps> = ({ preferences }) => {
-  const theme = getThemeClasses(preferences.theme);
+export function Footer() {
+  const pathname = usePathname();
+  const { prefs } = usePreferencias();
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  if (preferences.focusMode) return null;
+  if (prefs.modoFoco && pathname?.startsWith('/ensaios/')) return null;
 
   return (
-    <footer className={`w-full border-t ${theme.border} ${theme.bg} py-12 px-4 sm:px-8 transition-colors duration-300 mt-auto`}>
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
-        
-        <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${theme.border} ${theme.cardBg}`}>
-            <Feather className="w-4 h-4 text-[#8C7A6B]" />
+    <footer className="mt-auto w-full border-t border-line px-4 py-12 sm:px-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 text-center sm:text-left">
+        <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-card">
+              <Feather className="h-4 w-4 text-accent" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="font-display text-base font-bold tracking-tight">{site.nome}</p>
+              <p className="text-xs text-muted">
+                © {new Date().getFullYear()} {site.autor}
+                {site.crp ? ` — CRP ${site.crp}` : ''}. Todos os direitos reservados.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="font-['Playfair_Display',serif] font-bold text-base tracking-tight">
-              PSIQUE & PALAVRA
-            </p>
-            <p className={`text-xs ${theme.textMuted}`}>
-              © {new Date().getFullYear()} Marcelo Monso. Todos os direitos reservados.
-            </p>
-          </div>
+
+          <p className="max-w-sm font-serif text-xs italic text-muted">
+            &ldquo;Até você se tornar consciente do inconsciente, ele irá dirigir a sua vida e
+            você vai chamá-lo de destino.&rdquo; — C. G. Jung
+          </p>
         </div>
 
-        <div className={`text-xs ${theme.textMuted} max-w-sm font-['Lora',serif] italic`}>
-          "Até você se tornar consciente do inconsciente, ele irá dirigir a sua vida e você vai chamá-lo de destino." — C. G. Jung
+        <div className="border-t border-line pt-6">
+          <p className="mx-auto max-w-3xl text-xs leading-relaxed text-muted">
+            Os textos deste site têm caráter reflexivo e educativo. Não constituem
+            atendimento psicológico, diagnóstico ou orientação clínica individual, e não
+            substituem acompanhamento profissional. Se você está em sofrimento, procure um
+            psicólogo ou psiquiatra. Em situações de crise, o{' '}
+            <a
+              href="https://www.cvv.org.br/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline underline-offset-2"
+            >
+              CVV
+            </a>{' '}
+            atende gratuitamente pelo telefone 188, 24 horas por dia.
+          </p>
+          <p className="mx-auto mt-3 max-w-3xl text-xs text-muted">
+            <Link href="/privacidade" className="underline underline-offset-2 hover:text-ink">
+              Privacidade e uso de dados
+            </Link>
+          </p>
         </div>
-
-        <button
-          onClick={scrollToTop}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${theme.border} ${theme.cardBg} ${theme.cardHover} text-xs font-medium transition-colors`}
-          title="Voltar ao topo da página"
-        >
-          <span>Ao Topo</span>
-          <ArrowUp className="w-3.5 h-3.5" />
-        </button>
       </div>
     </footer>
   );
-};
+}

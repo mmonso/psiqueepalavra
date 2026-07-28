@@ -1,117 +1,69 @@
-import React from 'react';
-import { ViewMode, ReadingPreferences, ReadingTheme } from '../types';
-import { getThemeClasses } from '../utils/themeHelpers';
-import { BookOpen, Bookmark, Feather, Upload } from 'lucide-react';
+'use client';
 
-interface HeaderProps {
-  currentView: ViewMode;
-  onNavigate: (view: ViewMode) => void;
-  preferences: ReadingPreferences;
-  onUpdatePreferences: (prefs: Partial<ReadingPreferences>) => void;
-  favoriteCount: number;
-  onOpenUpload: () => void;
-}
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { BookOpen, Bookmark, Feather } from 'lucide-react';
+import { usePreferencias } from './PreferencesProvider';
+import { ThemePicker } from './ThemePicker';
+import { site } from '@/lib/site';
 
-export const Header: React.FC<HeaderProps> = ({
-  currentView,
-  onNavigate,
-  preferences,
-  onUpdatePreferences,
-  favoriteCount,
-  onOpenUpload,
-}) => {
-  const theme = getThemeClasses(preferences.theme);
+export function Header() {
+  const pathname = usePathname();
+  const { favoritos, prefs, pronto } = usePreferencias();
 
-  const themes: { id: ReadingTheme; label: string; color: string }[] = [
-    { id: 'papiro', label: 'Papiro', color: '#FBF9F5' },
-    { id: 'creme', label: 'Creme', color: '#F4EFE6' },
-    { id: 'alba', label: 'Branco', color: '#FFFFFF' },
-    { id: 'noturno', label: 'Noite', color: '#181A1B' },
-  ];
+  const naLeitura = pathname?.startsWith('/ensaios/') ?? false;
 
-  if (preferences.focusMode && currentView === 'reader') {
-    return null;
-  }
+  // O modo foco esconde o cabeçalho apenas durante a leitura, onde a barra do
+  // leitor continua visível com o botão de sair. Antes ele sumia em todas as
+  // telas e o leitor ficava sem nenhuma navegação, sem forma de desligar.
+  if (prefs.modoFoco && naLeitura) return null;
+
+  const linkClasse = (ativo: boolean) =>
+    [
+      'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors sm:px-4',
+      ativo
+        ? 'bg-btn text-btn-ink'
+        : 'text-muted hover:bg-card hover:text-ink',
+    ].join(' ');
 
   return (
-    <header className={`w-full border-b ${theme.border} ${theme.bg} sticky top-0 z-40 transition-colors duration-300`}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        {/* Brand & Title */}
-        <div 
-          onClick={() => onNavigate('home')}
-          className="cursor-pointer group flex items-center gap-3"
-        >
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center border ${theme.border} ${theme.cardBg} group-hover:scale-105 transition-transform`}>
-            <Feather className={`w-5 h-5 ${theme.text}`} />
-          </div>
-          <div>
-            <h1 className={`font-["Playfair_Display",serif] text-xl sm:text-2xl font-bold tracking-tight ${theme.text}`}>
-              PSIQUE & PALAVRA
-            </h1>
-            <p className={`text-xs uppercase tracking-widest font-medium ${theme.textMuted}`}>
-              Ensaios de Psicologia • Marcelo Monso
-            </p>
-          </div>
-        </div>
+    <header className="sticky top-0 z-40 w-full border-b border-line bg-canvas/95 backdrop-blur-sm">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-8 md:flex-row md:items-center md:justify-between">
+        <Link href="/" className="group flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-card transition-transform group-hover:scale-105">
+            <Feather className="h-5 w-5 text-accent" aria-hidden="true" />
+          </span>
+          <span>
+            <span className="block font-display text-xl font-bold tracking-tight sm:text-2xl">
+              {site.nome}
+            </span>
+            <span className="block text-xs font-medium uppercase tracking-widest text-muted">
+              {site.tagline} • {site.autor}
+            </span>
+          </span>
+        </Link>
 
-        {/* Navigation Tabs & Theme Dots */}
-        <nav className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <button
-            onClick={() => onNavigate('home')}
-            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              currentView === 'home'
-                ? `${theme.buttonBg} ${theme.buttonText}`
-                : `${theme.textMuted} hover:${theme.text} hover:${theme.cardBg}`
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
+        <nav aria-label="Navegação principal" className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <Link href="/" className={linkClasse(pathname === '/')}>
+            <BookOpen className="h-4 w-4" aria-hidden="true" />
             <span>Ensaios</span>
-          </button>
+          </Link>
 
-          <button
-            onClick={() => onNavigate('favorites')}
-            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              currentView === 'favorites'
-                ? `${theme.buttonBg} ${theme.buttonText}`
-                : `${theme.textMuted} hover:${theme.text} hover:${theme.cardBg}`
-            }`}
-          >
-            <Bookmark className="w-4 h-4" />
+          <Link href="/favoritos" className={linkClasse(pathname === '/favoritos')}>
+            <Bookmark className="h-4 w-4" aria-hidden="true" />
             <span>Favoritos</span>
-            {favoriteCount > 0 && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] rounded-full font-bold ${currentView === 'favorites' ? 'bg-white/20 text-white' : 'bg-[#EAE3D9] text-[#2C2A29]'}`}>
-                {favoriteCount}
+            {pronto && favoritos.length > 0 && (
+              <span className="ml-1 rounded-full bg-pill px-1.5 py-0.5 text-[10px] font-bold text-pill-ink">
+                {favoritos.length}
               </span>
             )}
-          </button>
+          </Link>
 
-          <button
-            onClick={onOpenUpload}
-            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium border ${theme.border} ${theme.cardBg} hover:opacity-80 transition-all shadow-sm`}
-            title="Subir arquivo de texto (.md, .txt) ou colar ensaio"
-          >
-            <Upload className="w-4 h-4 text-[#8C7A6B]" />
-            <span>Subir Texto</span>
-          </button>
-
-          {/* Discreet Theme Dots in Header */}
-          <div className="flex items-center gap-1.5 pl-2 sm:pl-3 border-l border-current border-opacity-20 ml-1" title="Tema de Leitura">
-            {themes.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => onUpdatePreferences({ theme: t.id })}
-                className={`w-5 h-5 rounded-full border transition-all flex items-center justify-center ${
-                  preferences.theme === t.id
-                    ? 'ring-2 ring-offset-2 ring-[#8C7A6B] scale-110'
-                    : 'opacity-70 hover:opacity-100'
-                }`}
-                style={{ backgroundColor: t.color, borderColor: t.id === 'alba' ? '#D0D0D0' : t.id === 'noturno' ? '#444' : '#C0B8AD' }}
-                aria-label={`Mudar tema para ${t.label}`}
-              />
-            ))}
+          <div className="ml-1 border-l border-line pl-2 sm:pl-3">
+            <ThemePicker />
           </div>
         </nav>
       </div>
     </header>
   );
-};
+}

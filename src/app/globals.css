@@ -1,0 +1,287 @@
+@import 'tailwindcss';
+
+/*
+  As cores do site são variáveis CSS trocadas pelo atributo data-theme no <html>.
+  Isso substitui o mapa de classes antigo (getThemeClasses), onde padrões como
+  `hover:${theme.text}` nunca chegavam a existir: o Tailwind só gera classes que
+  encontra escritas por extenso no código-fonte. Agora `hover:bg-card-hover` é
+  literal, e o valor por trás dela muda com o tema.
+*/
+
+@theme inline {
+  --color-canvas: var(--c-bg);
+  --color-ink: var(--c-text);
+  --color-muted: var(--c-muted);
+  --color-line: var(--c-border);
+  --color-card: var(--c-card);
+  --color-card-hover: var(--c-card-hover);
+  --color-accent: var(--c-accent);
+  --color-btn: var(--c-btn-bg);
+  --color-btn-ink: var(--c-btn-text);
+  --color-pill: var(--c-pill-bg);
+  --color-pill-ink: var(--c-pill-text);
+
+  --font-serif: var(--font-lora), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-playfair), Georgia, serif;
+}
+
+/* ---------------------------------------------------------------- temas -- */
+
+:root,
+[data-theme='papiro'] {
+  --c-bg: #fbf9f5;
+  --c-text: #2c2a29;
+  --c-muted: #6d6863;
+  --c-border: #eae3d9;
+  --c-card: #f3efe9;
+  --c-card-hover: #ebe5dc;
+  --c-btn-bg: #2c2a29;
+  --c-btn-text: #fbf9f5;
+  --c-pill-bg: #ebe5dc;
+  --c-pill-text: #59524b;
+  /* Escurecido em relação ao #8C7A6B original, que dava 3,8:1 sobre o papiro
+     e reprovava no WCAG AA para texto pequeno. Este dá 6,2:1. */
+  --c-accent: #6b5b4d;
+  --c-selection: #e5dfd5;
+  color-scheme: light;
+}
+
+[data-theme='creme'] {
+  --c-bg: #f4efe6;
+  --c-text: #3d352e;
+  --c-muted: #6b6055;
+  --c-border: #dfd6c9;
+  --c-card: #ede7db;
+  --c-card-hover: #e5ddcf;
+  --c-btn-bg: #3d352e;
+  --c-btn-text: #f4efe6;
+  --c-pill-bg: #e5ddcf;
+  --c-pill-text: #5e4f41;
+  --c-accent: #6e5642;
+  --c-selection: #ddd2bf;
+  color-scheme: light;
+}
+
+[data-theme='alba'] {
+  --c-bg: #ffffff;
+  --c-text: #1e1e1e;
+  --c-muted: #5c5c5c;
+  --c-border: #e6e6e6;
+  --c-card: #f8f8f8;
+  --c-card-hover: #f1f1f1;
+  --c-btn-bg: #1e1e1e;
+  --c-btn-text: #ffffff;
+  --c-pill-bg: #eeeeee;
+  --c-pill-text: #333333;
+  --c-accent: #565656;
+  --c-selection: #e4e4e4;
+  color-scheme: light;
+}
+
+[data-theme='noturno'] {
+  --c-bg: #181a1b;
+  --c-text: #e2e0dd;
+  --c-muted: #9aa0a4;
+  --c-border: #2d3032;
+  --c-card: #202325;
+  --c-card-hover: #262a2d;
+  --c-btn-bg: #e2e0dd;
+  --c-btn-text: #181a1b;
+  --c-pill-bg: #2a2d30;
+  --c-pill-text: #d5d1c8;
+  --c-accent: #c5beb5;
+  --c-selection: #3a3f42;
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------- leitura -- */
+/*
+  Tipografia da área de leitura, também por variável. O leitor troca os
+  atributos data-* no container e o texto responde sem re-render do conteúdo.
+*/
+
+[data-font='serif'] { --leitura-fonte: var(--font-serif); }
+[data-font='sans'] { --leitura-fonte: var(--font-sans); }
+[data-font='display'] { --leitura-fonte: var(--font-display); }
+
+[data-size='sm'] { --leitura-tamanho: 1.0625rem; }
+[data-size='md'] { --leitura-tamanho: 1.1875rem; }
+[data-size='lg'] { --leitura-tamanho: 1.375rem; }
+[data-size='xl'] { --leitura-tamanho: 1.625rem; }
+
+[data-leading='normal'] { --leitura-entrelinha: 1.6; }
+[data-leading='relaxed'] { --leitura-entrelinha: 1.85; }
+[data-leading='loose'] { --leitura-entrelinha: 2.1; }
+
+[data-width='compact'] { --leitura-largura: 60ch; }
+[data-width='standard'] { --leitura-largura: 70ch; }
+[data-width='wide'] { --leitura-largura: 82ch; }
+
+@media (min-width: 768px) {
+  [data-size='sm'] { --leitura-tamanho: 1.125rem; }
+  [data-size='md'] { --leitura-tamanho: 1.3125rem; }
+  [data-size='lg'] { --leitura-tamanho: 1.5rem; }
+  [data-size='xl'] { --leitura-tamanho: 1.875rem; }
+}
+
+.leitura {
+  font-family: var(--leitura-fonte, var(--font-serif));
+  font-size: var(--leitura-tamanho, 1.1875rem);
+  line-height: var(--leitura-entrelinha, 1.85);
+}
+
+.coluna-leitura {
+  max-width: var(--leitura-largura, 70ch);
+}
+
+/* --------------------------------------------------------------- base --- */
+
+* {
+  border-color: var(--c-border);
+}
+
+body {
+  background-color: var(--c-bg);
+  color: var(--c-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background-color: var(--c-selection);
+  color: var(--c-text);
+}
+
+/* Nenhuma âncora deve ficar sem indicação visível de foco pelo teclado. */
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------------------------------------------------------- animações --- */
+/*
+  Substituem `animate-in fade-in`, que vinham do plugin tailwindcss-animate —
+  nunca instalado no projeto, então nenhuma daquelas classes fazia efeito.
+*/
+
+@keyframes surgir {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes aparecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.anim-surgir {
+  animation: surgir 0.28s ease-out both;
+}
+
+.anim-aparecer {
+  animation: aparecer 0.2s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------ corpo do texto --- */
+
+.markdown > * + * {
+  margin-top: 1.5em;
+}
+
+.markdown h2,
+.markdown h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  margin-top: 2em;
+  margin-bottom: 0.6em;
+  line-height: 1.25;
+}
+
+.markdown h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.markdown h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+.markdown a {
+  color: var(--c-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.markdown strong {
+  font-weight: 600;
+}
+
+.markdown em {
+  font-style: italic;
+}
+
+.markdown blockquote {
+  margin: 2em 0;
+  padding: 1em 1.5em;
+  border-left: 3px solid var(--c-accent);
+  background-color: var(--c-card);
+  border-radius: 0 0.5rem 0.5rem 0;
+  font-style: italic;
+}
+
+.markdown blockquote > * + * {
+  margin-top: 0.75em;
+}
+
+.markdown ul,
+.markdown ol {
+  padding-left: 1.5em;
+}
+
+.markdown ul { list-style: disc; }
+.markdown ol { list-style: decimal; }
+
+.markdown li + li {
+  margin-top: 0.5em;
+}
+
+.markdown li::marker {
+  color: var(--c-accent);
+}
+
+.markdown hr {
+  border: 0;
+  border-top: 1px solid var(--c-border);
+  margin: 2.5em 0;
+}
+
+.markdown code {
+  font-size: 0.9em;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  background-color: var(--c-card);
+}

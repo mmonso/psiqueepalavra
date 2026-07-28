@@ -1,232 +1,273 @@
-import React from 'react';
-import { ReadingPreferences, FontFamily, FontSize, LineHeight, MaxWidth } from '../types';
-import { getThemeClasses } from '../utils/themeHelpers';
-import { Type, Minimize2, Maximize2, Sliders, Eye, ArrowLeft, Bookmark, Share2 } from 'lucide-react';
+'use client';
 
-interface ReadingToolbarProps {
-  preferences: ReadingPreferences;
-  onUpdatePreferences: (prefs: Partial<ReadingPreferences>) => void;
-  onBack: () => void;
-  isFavorite?: boolean;
-  onToggleFavorite?: () => void;
-  onShare?: () => void;
-  readingProgress: number; // 0 to 100
-  essayTitle?: string;
+import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, Check, Maximize2, Minimize2, Share2, Type } from 'lucide-react';
+import { usePreferencias } from './PreferencesProvider';
+import { FavoriteButton } from './FavoriteButton';
+import { urlDoEnsaio } from '@/lib/site';
+import type { Entrelinha, Fonte, Largura, Tamanho } from '@/lib/types';
+
+const FONTES: { id: Fonte; nome: string }[] = [
+  { id: 'serif', nome: 'Serifa (Lora)' },
+  { id: 'sans', nome: 'Sem serifa (Jakarta)' },
+  { id: 'display', nome: 'Clássica (Playfair)' },
+];
+
+const TAMANHOS: { id: Tamanho; nome: string }[] = [
+  { id: 'sm', nome: 'A-' },
+  { id: 'md', nome: 'A' },
+  { id: 'lg', nome: 'A+' },
+  { id: 'xl', nome: 'A++' },
+];
+
+const ENTRELINHAS: { id: Entrelinha; nome: string }[] = [
+  { id: 'normal', nome: 'Padrão' },
+  { id: 'relaxed', nome: 'Aconchegante' },
+  { id: 'loose', nome: 'Espaçado' },
+];
+
+const LARGURAS: { id: Largura; nome: string }[] = [
+  { id: 'compact', nome: 'Estreita' },
+  { id: 'standard', nome: 'Normal' },
+  { id: 'wide', nome: 'Larga' },
+];
+
+interface Props {
+  slug: string;
+  titulo: string;
 }
 
-export const ReadingToolbar: React.FC<ReadingToolbarProps> = ({
-  preferences,
-  onUpdatePreferences,
-  onBack,
-  isFavorite,
-  onToggleFavorite,
-  onShare,
-  readingProgress,
-  essayTitle,
-}) => {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const theme = getThemeClasses(preferences.theme);
+export function ReadingToolbar({ slug, titulo }: Props) {
+  const { prefs, atualizar } = usePreferencias();
+  const [painelAberto, setPainelAberto] = useState(false);
+  const [progresso, setProgresso] = useState(0);
+  const [copiado, setCopiado] = useState(false);
+  const timerCopia = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fonts: { id: FontFamily; label: string }[] = [
-    { id: 'serif', label: 'Serifa (Lora)' },
-    { id: 'sans', label: 'Sem Serifa (Jakarta)' },
-    { id: 'display', label: 'Clássica (Playfair)' },
-  ];
+  useEffect(() => {
+    let frame = 0;
 
-  const sizes: { id: FontSize; label: string }[] = [
-    { id: 'sm', label: 'A-' },
-    { id: 'md', label: 'A' },
-    { id: 'lg', label: 'A+' },
-    { id: 'xl', label: 'A++' },
-  ];
+    const medir = () => {
+      frame = 0;
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      setProgresso(total <= 0 ? 0 : Math.min(100, Math.max(0, (window.scrollY / total) * 100)));
+    };
 
-  const lineHeights: { id: LineHeight; label: string }[] = [
-    { id: 'normal', label: 'Padrão' },
-    { id: 'relaxed', label: 'Aconchegante' },
-    { id: 'loose', label: 'Espaçado' },
-  ];
+    // O listener passivo não bloqueia a rolagem, e o rAF junta vários eventos
+    // numa única medição por quadro — ler scrollHeight a cada evento força
+    // recálculo de layout e trava a rolagem em textos longos.
+    const aoRolar = () => {
+      if (!frame) frame = requestAnimationFrame(medir);
+    };
 
-  const widths: { id: MaxWidth; label: string }[] = [
-    { id: 'compact', label: 'Estreito' },
-    { id: 'standard', label: 'Normal' },
-    { id: 'wide', label: 'Largo' },
-  ];
+    medir();
+    window.addEventListener('scroll', aoRolar, { passive: true });
+    window.addEventListener('resize', aoRolar, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', aoRolar);
+      window.removeEventListener('resize', aoRolar);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    if (timerCopia.current) clearTimeout(timerCopia.current);
+  }, []);
+
+  const compartilhar = async () => {
+    const url = urlDoEnsaio(slug);
+    // Cada ensaio tem endereço próprio agora, então o link compartilhado
+    // abre o texto — antes copiava sempre a raiz do site.
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: titulo, url });
+        return;
+      } catch {
+        // Compartilhamento cancelado pelo leitor: cai na cópia abaixo.
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiado(true);
+      timerCopia.current = setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      // Sem permissão de área de transferência: nada a fazer sem incomodar.
+    }
+  };
+
+  const grupo = (ativo: boolean) =>
+    [
+      'rounded px-3 py-1.5 text-left text-xs font-medium transition-colors',
+      ativo ? 'bg-btn text-btn-ink' : 'bg-pill text-pill-ink hover:opacity-75',
+    ].join(' ');
 
   return (
     <>
-      {/* Reading Progress Bar at top of viewport */}
-      <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-50 pointer-events-none">
-        <div 
-          className="h-full bg-[#8C7A6B] transition-all duration-150 ease-out"
-          style={{ width: `${readingProgress}%` }}
+      <div
+        className="fixed inset-x-0 top-0 z-50 h-1 bg-transparent"
+        role="progressbar"
+        aria-label="Progresso da leitura"
+        aria-valuenow={Math.round(progresso)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="h-full bg-accent transition-[width] duration-150 ease-out"
+          style={{ width: `${progresso}%` }}
         />
       </div>
 
-      {/* Floating or pinned controls bar */}
-      <div className={`sticky top-0 z-30 ${theme.bg} border-b ${theme.border} py-3 px-4 sm:px-8 transition-colors duration-300 shadow-sm`}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          {/* Back button & Title excerpt */}
+      <div className="sticky top-0 z-30 border-b border-line bg-canvas/95 px-4 py-3 backdrop-blur-sm sm:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="flex items-center gap-3 overflow-hidden">
-            <button
-              onClick={onBack}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium ${theme.cardBg} ${theme.cardHover} ${theme.text} transition-colors`}
-              title="Voltar para a lista"
+            <Link
+              href="/"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-card px-3 py-1.5 text-sm font-medium transition-colors hover:bg-card-hover"
             >
-              <ArrowLeft className="w-4 h-4 shrink-0" />
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
               <span className="hidden sm:inline">Voltar</span>
-            </button>
-            {essayTitle && (
-              <span className={`text-xs sm:text-sm truncate font-medium ${theme.textMuted} max-w-xs md:max-w-md`}>
-                {essayTitle}
-              </span>
-            )}
+            </Link>
+            <span className="truncate text-xs font-medium text-muted sm:text-sm">{titulo}</span>
           </div>
 
-          {/* Actions & Settings Toggle */}
-          <div className="flex items-center gap-2">
-            {onToggleFavorite && (
-              <button
-                onClick={onToggleFavorite}
-                className={`p-2 rounded-lg transition-colors ${
-                  isFavorite ? 'text-[#C5832B] bg-[#EAE3D9]/60 dark:bg-amber-950/40' : `${theme.textMuted} hover:${theme.text} hover:${theme.cardBg}`
-                }`}
-                title={isFavorite ? "Remover dos favoritos" : "Salvar nos favoritos"}
-              >
-                <Bookmark className="w-4 h-4" fill={isFavorite ? "currentColor" : "none"} />
-              </button>
-            )}
-
-            {onShare && (
-              <button
-                onClick={onShare}
-                className={`p-2 rounded-lg ${theme.textMuted} hover:${theme.text} hover:${theme.cardBg} transition-colors`}
-                title="Compartilhar ou copiar link"
-              >
-                <Share2 className="w-4 h-4" />
-              </button>
-            )}
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <FavoriteButton slug={slug} titulo={titulo} />
 
             <button
-              onClick={() => onUpdatePreferences({ focusMode: !preferences.focusMode })}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                preferences.focusMode
-                  ? `${theme.buttonBg} ${theme.buttonText}`
-                  : `${theme.cardBg} ${theme.cardHover} ${theme.text}`
-              }`}
-              title="Modo Foco: ocultar navegação para leitura imersiva"
+              type="button"
+              onClick={compartilhar}
+              title="Compartilhar este ensaio"
+              aria-label="Compartilhar este ensaio"
+              className="rounded-lg p-2 text-muted transition-colors hover:bg-card hover:text-ink"
             >
-              {preferences.focusMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{preferences.focusMode ? 'Sair do Foco' : 'Modo Foco'}</span>
+              {copiado ? (
+                <Check className="h-4 w-4 text-accent" aria-hidden="true" />
+              ) : (
+                <Share2 className="h-4 w-4" aria-hidden="true" />
+              )}
             </button>
 
             <button
-              onClick={() => setIsOpen(!isOpen)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                isOpen
-                  ? `${theme.buttonBg} ${theme.buttonText}`
-                  : `${theme.cardBg} ${theme.cardHover} ${theme.text}`
-              }`}
-              title="Ajustar Tipografia e Conforto de Leitura"
+              type="button"
+              onClick={() => atualizar({ modoFoco: !prefs.modoFoco })}
+              aria-pressed={prefs.modoFoco}
+              title="Modo foco: esconde a navegação para uma leitura sem distração"
+              className={[
+                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                prefs.modoFoco ? 'bg-btn text-btn-ink' : 'bg-card hover:bg-card-hover',
+              ].join(' ')}
             >
-              <Type className="w-3.5 h-3.5" />
+              {prefs.modoFoco ? (
+                <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              <span className="hidden sm:inline">
+                {prefs.modoFoco ? 'Sair do foco' : 'Modo foco'}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPainelAberto((v) => !v)}
+              aria-expanded={painelAberto}
+              aria-controls="painel-tipografia"
+              className={[
+                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                painelAberto ? 'bg-btn text-btn-ink' : 'bg-card hover:bg-card-hover',
+              ].join(' ')}
+            >
+              <Type className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Tipografia</span>
             </button>
           </div>
         </div>
 
-        {/* Expanded Typography Panel */}
-        {isOpen && (
-          <div className={`mt-3 pt-3 border-t ${theme.border} max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs animate-in fade-in slide-in-from-top-2 duration-200`}>
-            {/* Font Family */}
-            <div>
-              <label className={`block font-semibold mb-1.5 uppercase tracking-wider ${theme.textMuted}`}>
-                Fonte de Leitura
-              </label>
+        {painelAberto && (
+          <div
+            id="painel-tipografia"
+            className="anim-surgir mx-auto mt-3 grid max-w-4xl grid-cols-1 gap-4 border-t border-line pt-3 sm:grid-cols-2 md:grid-cols-4"
+          >
+            <fieldset>
+              <legend className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
+                Fonte
+              </legend>
               <div className="flex flex-col gap-1">
-                {fonts.map((f) => (
+                {FONTES.map((f) => (
                   <button
                     key={f.id}
-                    onClick={() => onUpdatePreferences({ fontFamily: f.id })}
-                    className={`px-3 py-1.5 rounded text-left transition-colors font-medium ${
-                      preferences.fontFamily === f.id
-                        ? `${theme.buttonBg} ${theme.buttonText}`
-                        : `${theme.pillBg} ${theme.pillText} hover:opacity-80`
-                    }`}
+                    type="button"
+                    aria-pressed={prefs.fonte === f.id}
+                    onClick={() => atualizar({ fonte: f.id })}
+                    className={grupo(prefs.fonte === f.id)}
                   >
-                    {f.label}
+                    {f.nome}
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
-            {/* Font Size */}
-            <div>
-              <label className={`block font-semibold mb-1.5 uppercase tracking-wider ${theme.textMuted}`}>
-                Tamanho da Fonte
-              </label>
+            <fieldset>
+              <legend className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
+                Tamanho
+              </legend>
               <div className="grid grid-cols-4 gap-1">
-                {sizes.map((s) => (
+                {TAMANHOS.map((t) => (
                   <button
-                    key={s.id}
-                    onClick={() => onUpdatePreferences({ fontSize: s.id })}
-                    className={`py-2 rounded font-bold text-center transition-colors ${
-                      preferences.fontSize === s.id
-                        ? `${theme.buttonBg} ${theme.buttonText}`
-                        : `${theme.pillBg} ${theme.pillText} hover:opacity-80`
-                    }`}
+                    key={t.id}
+                    type="button"
+                    aria-pressed={prefs.tamanho === t.id}
+                    aria-label={`Tamanho ${t.nome}`}
+                    onClick={() => atualizar({ tamanho: t.id })}
+                    className={`${grupo(prefs.tamanho === t.id)} text-center font-bold`}
                   >
-                    {s.label}
+                    {t.nome}
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
-            {/* Line Height */}
-            <div>
-              <label className={`block font-semibold mb-1.5 uppercase tracking-wider ${theme.textMuted}`}>
-                Espaçamento de Linha
-              </label>
+            <fieldset>
+              <legend className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
+                Entrelinha
+              </legend>
               <div className="flex flex-col gap-1">
-                {lineHeights.map((lh) => (
+                {ENTRELINHAS.map((e) => (
                   <button
-                    key={lh.id}
-                    onClick={() => onUpdatePreferences({ lineHeight: lh.id })}
-                    className={`px-3 py-1.5 rounded text-left transition-colors font-medium ${
-                      preferences.lineHeight === lh.id
-                        ? `${theme.buttonBg} ${theme.buttonText}`
-                        : `${theme.pillBg} ${theme.pillText} hover:opacity-80`
-                    }`}
+                    key={e.id}
+                    type="button"
+                    aria-pressed={prefs.entrelinha === e.id}
+                    onClick={() => atualizar({ entrelinha: e.id })}
+                    className={grupo(prefs.entrelinha === e.id)}
                   >
-                    {lh.label}
+                    {e.nome}
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
 
-            {/* Max Width */}
-            <div>
-              <label className={`block font-semibold mb-1.5 uppercase tracking-wider ${theme.textMuted}`}>
-                Largura da Coluna
-              </label>
+            <fieldset>
+              <legend className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted">
+                Largura da coluna
+              </legend>
               <div className="flex flex-col gap-1">
-                {widths.map((w) => (
+                {LARGURAS.map((l) => (
                   <button
-                    key={w.id}
-                    onClick={() => onUpdatePreferences({ maxWidth: w.id })}
-                    className={`px-3 py-1.5 rounded text-left transition-colors font-medium ${
-                      preferences.maxWidth === w.id
-                        ? `${theme.buttonBg} ${theme.buttonText}`
-                        : `${theme.pillBg} ${theme.pillText} hover:opacity-80`
-                    }`}
+                    key={l.id}
+                    type="button"
+                    aria-pressed={prefs.largura === l.id}
+                    onClick={() => atualizar({ largura: l.id })}
+                    className={grupo(prefs.largura === l.id)}
                   >
-                    {w.label}
+                    {l.nome}
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
           </div>
         )}
       </div>
     </>
   );
-};
+}

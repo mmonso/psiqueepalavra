@@ -1,104 +1,84 @@
-import React from 'react';
-import { Essay, ReadingPreferences } from '../types';
-import { getThemeClasses } from '../utils/themeHelpers';
-import { Clock, Bookmark, ArrowUpRight, Heart, Eye } from 'lucide-react';
+'use client';
 
-interface EssayCardProps {
-  essay: Essay;
-  preferences: ReadingPreferences;
-  onSelect: (essayId: string) => void;
-  onToggleFavorite?: (essayId: string, e: React.MouseEvent) => void;
-  onSelectTag?: (tag: string, e: React.MouseEvent) => void;
+import Link from 'next/link';
+import { ArrowUpRight, Clock } from 'lucide-react';
+import { FavoriteButton } from './FavoriteButton';
+import type { Ensaio } from '@/lib/types';
+
+interface Props {
+  ensaio: Ensaio;
+  /** Filtra a lista pela tag clicada. Ausente, as tags viram apenas rótulos. */
+  aoEscolherTag?: (tag: string) => void;
 }
 
-export const EssayCard: React.FC<EssayCardProps> = ({
-  essay,
-  preferences,
-  onSelect,
-  onToggleFavorite,
-  onSelectTag,
-}) => {
-  const theme = getThemeClasses(preferences.theme);
-
+export function EssayCard({ ensaio, aoEscolherTag }: Props) {
   return (
-    <article 
-      onClick={() => onSelect(essay.id)}
-      className={`group cursor-pointer rounded-xl border ${theme.border} ${theme.cardBg} ${theme.cardHover} p-6 sm:p-8 transition-all duration-200 flex flex-col justify-between h-full relative overflow-hidden`}
-    >
+    /*
+      O card inteiro é clicável, mas quem carrega o link é o título: o
+      pseudo-elemento depois dele cobre o card. Assim o cartão continua sendo
+      um único destino no teclado e nos leitores de tela, em vez do
+      <article onClick> antigo, que o teclado não alcançava.
+    */
+    <article className="group relative flex h-full flex-col justify-between rounded-xl border border-line bg-card p-6 transition-colors hover:bg-card-hover focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-canvas sm:p-8">
       <div>
-        {/* Meta Header: Tags & Time */}
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {essay.tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                onClick={(e) => {
-                  if (onSelectTag) {
-                    e.stopPropagation();
-                    onSelectTag(tag, e);
-                  }
-                }}
-                className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide uppercase transition-colors ${theme.pillBg} ${theme.pillText} hover:opacity-80`}
-              >
-                {tag}
-              </span>
-            ))}
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {ensaio.tags.slice(0, 2).map((tag) =>
+              aoEscolherTag ? (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => aoEscolherTag(tag)}
+                  className="relative z-10 rounded-full bg-pill px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-pill-ink transition-opacity hover:opacity-75"
+                >
+                  {tag}
+                </button>
+              ) : (
+                <span
+                  key={tag}
+                  className="rounded-full bg-pill px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-pill-ink"
+                >
+                  {tag}
+                </span>
+              ),
+            )}
           </div>
 
-          <div className={`flex items-center gap-3 text-xs font-medium ${theme.textMuted}`}>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              {essay.readingTimeMinutes} min de leitura
+          <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-muted">
+            <span className="flex items-center gap-1 whitespace-nowrap">
+              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+              {ensaio.minutosLeitura} min
             </span>
-            {onToggleFavorite && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite(essay.id, e);
-                }}
-                className={`p-1.5 rounded-md transition-all hover:scale-110 ${
-                  essay.isFavorite ? 'text-[#C5832B]' : `${theme.textMuted} hover:${theme.text}`
-                }`}
-                title={essay.isFavorite ? "Remover dos favoritos" : "Salvar nos favoritos"}
-              >
-                <Bookmark className="w-4 h-4" fill={essay.isFavorite ? "currentColor" : "none"} />
-              </button>
-            )}
+            <FavoriteButton slug={ensaio.slug} titulo={ensaio.titulo} className="relative z-10" />
           </div>
         </div>
 
-        {/* Title */}
-        <h2 className={`font-["Playfair_Display",serif] text-xl sm:text-2xl font-bold leading-snug mb-3 ${theme.text} group-hover:underline decoration-1 underline-offset-4 transition-all`}>
-          {essay.title}
+        <h2 className="mb-3 font-display text-xl font-bold leading-snug tracking-tight sm:text-2xl">
+          <Link
+            href={`/ensaios/${ensaio.slug}`}
+            className="after:absolute after:inset-0 after:content-[''] group-hover:underline group-hover:decoration-1 group-hover:underline-offset-4"
+          >
+            {ensaio.titulo}
+          </Link>
         </h2>
 
-        {/* Excerpt */}
-        <p className={`text-sm sm:text-base leading-relaxed ${theme.textMuted} font-["Lora",serif] mb-6 line-clamp-3`}>
-          {essay.excerpt}
+        <p className="mb-6 font-serif text-sm leading-relaxed text-muted sm:text-base">
+          {ensaio.resumo}
         </p>
       </div>
 
-      {/* Footer Meta */}
-      <div className={`pt-4 border-t ${theme.border} flex items-center justify-between text-xs ${theme.textMuted}`}>
+      <div className="flex items-center justify-between border-t border-line pt-4 text-xs text-muted">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-current">{essay.author}</span>
-          <span>•</span>
-          <span>{essay.date}</span>
+          <span className="font-medium">{ensaio.autor}</span>
+          <span aria-hidden="true">•</span>
+          <time dateTime={ensaio.data}>{ensaio.dataFormatada}</time>
         </div>
 
-        <div className="flex items-center gap-3">
-          {essay.views !== undefined && (
-            <span className="flex items-center gap-1" title="Leituras">
-              <Eye className="w-3.5 h-3.5" />
-              {essay.views}
-            </span>
-          )}
-          <span className={`flex items-center gap-1 font-semibold group-hover:translate-x-0.5 transition-transform ${theme.text}`}>
-            Ler Ensaio
-            <ArrowUpRight className="w-3.5 h-3.5" />
-          </span>
-        </div>
+        <span className="flex items-center gap-1 font-semibold text-ink transition-transform group-hover:translate-x-0.5">
+          Ler ensaio
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
       </div>
     </article>
   );
-};
+}
